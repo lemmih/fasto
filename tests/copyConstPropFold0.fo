@@ -1,0 +1,9 @@
+fun int f(int x, int y) =
+  (x + 2) * (y - 2)
+
+fun int main() =
+  let a = read(int) in
+  let b = let x = a in
+          let y = 2 in
+          (x + 2) * (y - 2)
+  in write(b)

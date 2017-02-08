@@ -1,0 +1,148 @@
+
+%{
+
+let p0 = (0,0)
+
+open Microsoft.FSharp.Text.Parsing
+open AbSyn
+
+(* parse-error function *)
+let mutable ErrorContextDescriptor : string = ""
+
+let parse_error_rich =
+  Some (fun (ctxt: ParseErrorContext<_>) ->
+    ErrorContextDescriptor <-
+      match ctxt.CurrentToken with
+      | None -> "At beginning of input\n"
+      | Some token -> sprintf "at token %A\n" token
+  )
+
+%}
+
+//////////////////////////////////////////////////////////////////////
+// TODO: Add new (lexer) token definitions:
+//
+//   TODO: project task 1 :
+//     - multiplication (*), division (/), numerical negation (~),
+//       logical negation (not), logical and (&&), logical or (||),
+//       boolean literals (true, false)
+//     - add the required precedence and associativity rules for
+//       *, /, ~, not, &&, ||
+//
+//   TODO: project task 2: replicate, map, scan
+//
+//   TODO: project task 4: range
+//////////////////////////////////////////////////////////////////////
+
+%token <int*(int*int)> NUM
+%token <char*(int*int)> CHARLIT
+%token <string*(int*int)> ID STRINGLIT
+%token <(int*int)> IF THEN ELSE LET IN EOF
+%token <(int*int)> INT CHAR BOOL
+%token <(int*int)> PLUS MINUS LESS TIMES DIVIDE
+%token <(int*int)> DEQ LTH EQ OP REDUCE IOTA ARROW
+%token <(int*int)> FUN FN COMMA SEMICOLON READ WRITE REPLICATE MAP
+%token <(int*int)> LPAR RPAR LBRACKET RBRACKET LCURLY RCURLY
+%token <(int*int)> TRUE FALSE AND OR NOT NEGATE
+
+%nonassoc ifprec letprec
+%right AND OR
+%left DEQ LTH
+%left PLUS MINUS
+%left TIMES DIVIDE
+%nonassoc NOT NEGATE
+
+%start Prog
+%type <AbSyn.UntypedProg> Prog
+%type <AbSyn.UntypedFunDec list> FunDecs
+%type <AbSyn.UntypedFunDec> Fun
+%type <AbSyn.Type> Type
+%type <AbSyn.UntypedExp> Exp
+%type <AbSyn.UntypedExp list> Exps
+%type <AbSyn.UntypedFunArg> FunArg
+
+%%
+
+Prog :    FunDecs EOF   { $1 }
+;
+
+FunDecs : FUN Fun FunDecs { $2 :: $3 }
+        | FUN Fun         { $2 :: [] }
+;
+
+Fun : Type ID LPAR Params RPAR EQ Exp
+           { FunDec (fst $2, $1, $4, $7, snd $2) }
+    | Type ID LPAR RPAR EQ Exp
+           { FunDec (fst $2, $1, [], $6, snd $2) }
+;
+
+Type :   INT                    { AbSyn.Int }
+     |   CHAR                   { AbSyn.Char }
+     |   BOOL                   { AbSyn.Bool }
+     |   LBRACKET Type RBRACKET { AbSyn.Array $2 }
+;
+
+Params : Type ID COMMA Params
+                       { Param (fst $2, $1) :: $4 }
+       | Type ID       { Param (fst $2, $1) :: [] }
+;
+
+///////////////////////////////////////////////////////
+// TODO: project tasks 1,2,4:
+//       add grammer rules for the new expressions
+///////////////////////////////////////////////////////
+
+Exp : NUM            { Constant (IntVal (fst $1), snd $1) }
+    | CHARLIT        { Constant (CharVal (fst $1), snd $1) }
+    | TRUE           { Constant (BoolVal true, $1) }
+    | FALSE          { Constant (BoolVal false, $1) }
+    | ID             { Var $1 }
+    | STRINGLIT      { StringLit $1 }
+    | LCURLY Exps RCURLY
+                     { ArrayLit ($2, (), $1) }
+    | Exp PLUS  Exp  { Plus ($1, $3, $2) }
+    | Exp MINUS Exp  { Minus($1, $3, $2) }
+    | Exp TIMES Exp  { Times ($1, $3, $2) }
+    | Exp DIVIDE Exp { Divide ($1, $3, $2) }
+    | Exp DEQ   Exp  { Equal($1, $3, $2) }
+    | Exp LTH   Exp  { Less ($1, $3, $2) }
+    | Exp AND Exp    { And ($1, $3, $2) }
+    | Exp OR Exp     { Or ($1, $3, $2) }
+    | NOT Exp        { Not ($2, $1) }
+    | NEGATE Exp     { Negate ($2, $1) }
+    | IF Exp THEN Exp ELSE Exp %prec ifprec
+                     { If ($2, $4, $6, $1) }
+    | ID LPAR Exps RPAR
+                     { Apply (fst $1, $3, snd $1) }
+    | ID LPAR RPAR   { Apply (fst $1, [], snd $1) }
+    | READ LPAR Type RPAR
+                     { Read ($3, $1) }
+    | WRITE LPAR Exp RPAR
+                     { Write ($3, (), $1) }
+    | IOTA LPAR Exp RPAR
+                     { Iota ($3, $1) }
+    | REDUCE LPAR FunArg COMMA Exp COMMA Exp RPAR
+                     { Reduce ($3, $5, $7, (), $1) }
+    | REPLICATE LPAR Exp COMMA Exp RPAR
+                     {  Replicate ($3, $5, (), $1)}
+    | MAP LPAR FunArg COMMA Exp RPAR
+                     {  Map ($3, $5, (), (), $1)}
+    | LPAR Exp RPAR  { $2 }
+    | LET ID EQ Exp IN Exp %prec letprec
+                     { Let (Dec (fst $2, $4, $3), $6, $1) }
+    | ID LBRACKET Exp RBRACKET
+                     { Index (fst $1, $3, (), $2) }
+;
+
+Exps : Exp COMMA Exps { $1 :: $3 }
+     | Exp            { $1 :: [] }
+;
+
+FunArg : ID    { FunName (fst $1 ) }
+       | FN Type LPAR RPAR ARROW Exp
+               { Lambda ($2, [], $6, $1) }
+       | FN Type LPAR Params RPAR ARROW Exp
+               { Lambda ($2, $4, $7, $1) }
+;
+
+%%

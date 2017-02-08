@@ -1,0 +1,24 @@
+fun int main() =
+  let a0 = write (false && false) in
+  let b0 = write (false && true) in
+  let c0 = write (true && false) in
+  let d0 = write (true && true) in
+
+  let a1 = write (false || false) in
+  let b1 = write (false || true) in
+  let c1 = write (true || false) in
+  let d1 = write (true || true) in
+
+  let a2 = write (~true) in
+  let b2 = write (~false) in
+  let c2 = write (not true) in
+  let d2 = write (not false) in
+
+  let a3 = write (~false && false) in
+  let b3 = write (false && ~false) in
+  let c3 = write (not false && false) in
+  let d3 = write (false && not false) in
+
+  let a4 = write ((true || false) && true || false) in
+
+  0

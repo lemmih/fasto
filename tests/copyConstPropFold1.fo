@@ -1,0 +1,6 @@
+fun int main() =
+  let length = 40 in
+  let array = iota(length) in
+  let index = length / 10 in
+  let x = array[index] in
+  write(x * 1 + 0)

@@ -1,0 +1,10 @@
+fun int sum(int n) =
+  if n == 0
+  then 0
+  else n + sum(n-1)
+
+fun int main() =
+  let n = read(int) in
+  if (n < 1)
+    then let unused = write("Incorrect Input!") in 0
+    else write(sum(n))

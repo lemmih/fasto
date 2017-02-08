@@ -1,0 +1,5 @@
+fun bool writeBool(bool b) = write(b)
+
+fun [bool] main() =
+  let fs = replicate(7, false) in
+  map(writeBool, fs)
