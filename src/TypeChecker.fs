@@ -244,8 +244,13 @@ let rec checkExp  (ftab : FunTable)
         - assuming `a` is of type `t` the result type
           of replicate is `[t]`
     *)
-    | Replicate (_, _, _, _) ->
-        failwith "Unimplemented type check of replicate"
+    (* replicate :: Int -> a -> [a] *)
+    | Replicate (n_exp, val_exp, _, pos) ->
+        let (n_type  , n_dec  ) = checkExp ftab vtab n_exp
+        let (val_type, val_dec  ) = checkExp ftab vtab val_exp
+        match n_type with
+          | Int -> (Array val_type, Replicate (n_dec, val_dec, val_type, pos))
+          | otherwise -> failwith "Type error in replicate"
 
     (* TODO project task 2: Hint for `map(f, arr)`
         Look into the type-checking lecture slides for the type rule of `map`.
@@ -254,8 +259,15 @@ let rec checkExp  (ftab : FunTable)
          - `arr` should be of type `[ta]`
          - the result of `map` should have type `[tb]`
     *)
-    | Map (_, _, _, _, _) ->
-        failwith "Unimplemented type check of map"
+    | Map (fun_exp, arr_exp, _, _, pos) ->
+        let (arr_type  , arr_dec  ) = checkExp ftab vtab arr_exp
+        match arr_type with
+          | Array aTy ->
+              let (typed_fun, retTy, [fun_arg_type]) = checkFunArg ftab vtab pos fun_exp
+              if fun_arg_type <> aTy
+                then failwith "invalid arg type in map"
+              (Array retTy, Map (typed_fun, arr_dec, fun_arg_type, retTy, pos))
+          | otherwise -> failwith "type error in map"
 
     (* TODO project task 2: `scan(f, ne, arr)`
         Hint: Implementation is very similar to `reduce(f, ne, arr)`.
