@@ -163,13 +163,14 @@ let rec compileExp  (e      : TypedExp)
                     (vtable : VarTable)
                     (place  : Mips.reg)
                   : Mips.Instruction list =
+  // Added by Lemmih: compileBinOp
   let compileBinOp op e1 e2 =
         let t1 = newName "op_L"
         let t2 = newName "op_R"
         let code1 = compileExp e1 vtable t1
         let code2 = compileExp e2 vtable t2
         code1 @ code2 @ [op (place,t1,t2)]
-
+  // Added by Lemmih: compileUniOp
   let compileUniOp op e1 =
         let t1 = newName "op"
         let code1 = compileExp e1 vtable t1
@@ -184,6 +185,7 @@ let rec compileExp  (e      : TypedExp)
       else
         [ Mips.LUI (place, makeConst (n / 65536))
         ; Mips.ORI (place, place, makeConst (n % 65536)) ]
+  // Added by Lemmih: Constant BoolVal
   | Constant (BoolVal true, _) -> [Mips.LI (place, makeConst 1)]
   | Constant (BoolVal false, _) -> [Mips.LI (place, makeConst 0)]
   | Constant (CharVal c, pos) -> [ Mips.LI (place, makeConst (int c)) ]
@@ -236,18 +238,18 @@ let rec compileExp  (e      : TypedExp)
         | None          -> raise (MyError ("Name " + vname + " not found", pos))
         | Some reg_name -> [Mips.MOVE (place, reg_name)]
 
-  | Plus (e1, e2, pos) -> compileBinOp Mips.ADD e1 e2
+  | Plus (e1, e2, pos) -> compileBinOp Mips.ADD e1 e2  // Added by Lemmih
 
-  | Minus (e1, e2, pos) -> compileBinOp Mips.SUB e1 e2
+  | Minus (e1, e2, pos) -> compileBinOp Mips.SUB e1 e2 // Added by Lemmih
 
   (* TODO project task 1:
         Look in `AbSyn.fs` for the expression constructors `Times`, ...
         `Times` and `Divide` are very similar to `Plus`/`Minus`
         `Not` and `Negate` are simpler; you can use `Mips.XORI` for `Not`
   *)
-  | Times (e1, e2, pos) -> compileBinOp Mips.MUL e1 e2
+  | Times (e1, e2, pos) -> compileBinOp Mips.MUL e1 e2  // Added by Lemmih
 
-  | Divide (e1, e2, pos) -> compileBinOp Mips.DIV e1 e2
+  | Divide (e1, e2, pos) -> compileBinOp Mips.DIV e1 e2 // Added by Lemmih
 
   | Not (e1, pos) -> compileUniOp (fun (p,reg) -> Mips.XORI (p, reg, makeConst 1)) e1
 
@@ -396,9 +398,9 @@ let rec compileExp  (e      : TypedExp)
         in `e1 || e2` if the execution of `e1` will evaluate to `true` then
         the code of `e2` must not be executed. Similar for `And` (&&).
   *)
-  | And (e1, e2, pos) -> compileBinOp Mips.AND e1 e2
+  | And (e1, e2, pos) -> compileBinOp Mips.AND e1 e2 // Added by Lemmih
 
-  | Or (e1, e2, pos) -> compileBinOp Mips.OR e1 e2
+  | Or (e1, e2, pos) -> compileBinOp Mips.OR e1 e2   // Added by Lemmih
 
   (* Indexing:
      1. generate code to compute the index

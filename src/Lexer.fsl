@@ -63,17 +63,17 @@ let keyword (s, pos) =
        | "fun"          -> Parser.FUN pos
        | "fn"           -> Parser.FN pos
 
-       | "true"         -> Parser.TRUE pos
-       | "false"        -> Parser.FALSE pos
-       | "not"          -> Parser.NOT pos
+       | "true"         -> Parser.TRUE pos  // Added by Lemmih
+       | "false"        -> Parser.FALSE pos // Added by Lemmih
+       | "not"          -> Parser.NOT pos   // Added by Lemmih
 
 (* specials: *)
        | "iota"         -> Parser.IOTA pos
        | "reduce"       -> Parser.REDUCE pos
        | "read"         -> Parser.READ pos
        | "write"        -> Parser.WRITE pos
-       | "replicate"    -> Parser.REPLICATE pos
-       | "map"          -> Parser.MAP pos
+       | "replicate"    -> Parser.REPLICATE pos  // Added by Lemmih
+       | "map"          -> Parser.MAP pos        // Added by Lemmih
        | _              -> Parser.ID (s, pos)
 
 }
@@ -108,8 +108,8 @@ rule Token = parse
                           }
   | '+'                   { Parser.PLUS   (getPos lexbuf) }
   | '-'                   { Parser.MINUS  (getPos lexbuf) }
-  | '*'                   { Parser.TIMES  (getPos lexbuf) }
-  | '/'                   { Parser.DIVIDE (getPos lexbuf) }
+  | '*'                   { Parser.TIMES  (getPos lexbuf) }  // Added by Lemmih
+  | '/'                   { Parser.DIVIDE (getPos lexbuf) }  // Added by Lemmih
   | "=>"                  { Parser.ARROW  (getPos lexbuf) }
   | "=="                  { Parser.DEQ    (getPos lexbuf) }
   | '='                   { Parser.EQ     (getPos lexbuf) }
@@ -121,8 +121,8 @@ rule Token = parse
   | '{'                   { Parser.LCURLY (getPos lexbuf) }
   | '}'                   { Parser.RCURLY (getPos lexbuf) }
   | ','                   { Parser.COMMA  (getPos lexbuf) }
-  | "&&"                  { Parser.AND  (getPos lexbuf) }
-  | "||"                  { Parser.OR  (getPos lexbuf) }
-  | '~'                   { Parser.NEGATE  (getPos lexbuf) }
+  | "&&"                  { Parser.AND  (getPos lexbuf) }    // Added by Lemmih
+  | "||"                  { Parser.OR  (getPos lexbuf) }     // Added by Lemmih
+  | '~'                   { Parser.NEGATE  (getPos lexbuf) } // Added by Lemmih
   | eof                   { Parser.EOF    (getPos lexbuf) }
   | _                     { lexerError lexbuf "Illegal symbol in input" }

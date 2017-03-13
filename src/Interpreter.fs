@@ -162,6 +162,7 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
         e.g., `And (e1, e2, pos)` should not evaluate `e2` if `e1` already
               evaluates to false.
   *)
+  // Added by Lemmih: Times, Divide, And, Or, Not, Negate
   | Times(e1, e2, pos) ->
         let res1   = evalExp(e1, vtab, ftab)
         let res2   = evalExp(e2, vtab, ftab)
@@ -269,6 +270,7 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
          the value of `a`; otherwise raise an error (containing
          a meaningful message).
   *)
+  // Added by Lemmih: Replicate
   | Replicate (nExp, eltExp, _, pos) ->
         let n    = evalExp(nExp, vtab, ftab)
         let elt  = evalExp(eltExp, vtab, ftab)
@@ -283,6 +285,7 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
        - use F# `List.map` to evaluate `f(a)` for every element (value) `a` of `arr`,
        - create an `ArrayVal` from the (list) result of the previous step.
   *)
+  // Added by Lemmih: Map
   | Map (farg, arrexp, aTy, bTy, pos) ->
         let farg_ret_type = rtpFunArg farg ftab pos
         let arr  = evalExp(arrexp, vtab, ftab)

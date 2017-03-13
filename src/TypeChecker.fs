@@ -77,6 +77,7 @@ let rec checkExp  (ftab : FunTable)
         then (t, op (e1', e2', pos))
         else raise (MyError ("In checkBinOp: types not equal "+ppType t+" and "+ppType t1+" and "+ppType t2, pos))
 
+    // Added by Lemmih
     let checkUniOp   op
                         (t : Type)
                         (e1 : UntypedExp) (pos : Position)
@@ -120,6 +121,7 @@ let rec checkExp  (ftab : FunTable)
         Implement by pattern matching Plus/Minus above.
         See `AbSyn.fs` for the expression constructors of `Times`, ...
     *)
+    // Added by Lemmih: Times, Divide, And, Or, Not, Negate.
     | Times (e1,e2,pos) -> checkBinOp Times Int e1 e2 pos
 
     | Divide (e1,e2,pos) -> checkBinOp Divide Int e1 e2 pos
@@ -245,6 +247,7 @@ let rec checkExp  (ftab : FunTable)
           of replicate is `[t]`
     *)
     (* replicate :: Int -> a -> [a] *)
+    // Added by Lemmih: Replicate
     | Replicate (n_exp, val_exp, _, pos) ->
         let (n_type  , n_dec  ) = checkExp ftab vtab n_exp
         let (val_type, val_dec  ) = checkExp ftab vtab val_exp
@@ -259,6 +262,7 @@ let rec checkExp  (ftab : FunTable)
          - `arr` should be of type `[ta]`
          - the result of `map` should have type `[tb]`
     *)
+    // Added by Lemmih: Map
     | Map (fun_exp, arr_exp, _, _, pos) ->
         let (arr_type  , arr_dec  ) = checkExp ftab vtab arr_exp
         match arr_type with
