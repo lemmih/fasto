@@ -3,6 +3,13 @@
 # Completely non-clever explicit make targets for every file in the
 # Fasto compiler.
 
+OS=$(shell uname -s)
+
+ifeq ($(OS),Darwin)
+  export AS=as -arch i386
+  export CC=cc -arch i386 -framework CoreFoundation -lobjc -liconv
+endif
+
 .PHONY: all clean
 
 fslex=mono lib/fslex.exe
