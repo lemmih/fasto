@@ -302,7 +302,7 @@ let rec checkExp  (ftab : FunTable)
                                    ", expected " + ppType f_arg_type
                                  , pos)
         if   elem_type = f_arg_type && elem_type = n_type then
-             (Array elem_type, Reduce (f', n_dec, arr_dec, elem_type, pos))
+             (Array elem_type, Scan (f', n_dec, arr_dec, elem_type, pos))
         elif elem_type = f_arg_type then
              raise (err ("neutral element", n_type))
         else raise (err ("array element", elem_type))
