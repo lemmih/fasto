@@ -695,7 +695,7 @@ let rec compileExp  (e      : TypedExp)
       let loop_map =
             load_code tmp_elt_reg arr_reg arr_tp @
             applyFunArg(unop, [tmp_elt_reg], vtable, tmp_ret_reg, pos) @
-            store_code addr_reg tmp_elt_reg ret_tp
+            store_code addr_reg tmp_ret_reg ret_tp
       let loop_footer = [ Mips.ADDI (i_reg, i_reg, "1")
                         ; Mips.J loop_beg
                         ; Mips.LABEL loop_end
