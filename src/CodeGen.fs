@@ -593,13 +593,12 @@ let rec compileExp  (e      : TypedExp)
                         ; Mips.BGEZ (tmp_reg, loop_end)
                         ]
       (* replicate is just 'arr[i] = elt'. *)
-      let loop_rep    = [ Mips.SW (elt_reg, addr_reg, "0") ]
-      let loop_advance =
-              match getElemSize tp with
-                | One  -> [ Mips.ADDI (addr_reg, addr_reg, "1")
-                          ]
-                | Four -> [ Mips.ADDI (addr_reg, addr_reg, "4")
-                          ]
+      let loop_rep    =
+            match getElemSize tp with
+              | One ->  [ Mips.SB (elt_reg, addr_reg, "0")
+                        ; Mips.ADDI (addr_reg, addr_reg, "1") ]
+              | Four -> [ Mips.SW (elt_reg, addr_reg, "0")
+                        ; Mips.ADDI (addr_reg, addr_reg, "4") ]
       let loop_footer = [ Mips.ADDI (i_reg, i_reg, "1")
                         ; Mips.J loop_beg
                         ; Mips.LABEL loop_end
@@ -610,7 +609,6 @@ let rec compileExp  (e      : TypedExp)
        @ init_regs
        @ loop_header
        @ loop_rep
-       @ loop_advance
        @ loop_footer
 
   (* TODO project task 2: see also the comment to replicate.
