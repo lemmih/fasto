@@ -74,6 +74,7 @@ let keyword (s, pos) =
        | "write"        -> Parser.WRITE pos
        | "replicate"    -> Parser.REPLICATE pos  // Added by Lemmih
        | "map"          -> Parser.MAP pos        // Added by Lemmih
+       | "scan"         -> Parser.SCAN pos
        | _              -> Parser.ID (s, pos)
 
 }

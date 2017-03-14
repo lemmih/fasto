@@ -298,9 +298,16 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
   (* TODO project task 2: `scan(f, ne, arr)`
      Implementation similar to reduce, except that it produces an array
      of the same type and length to the input array `arr`.
+     scan(+, 0, [1,2,3]) = [0+1, 0+1+2, 0+1+2+3] = [1,3,6]
   *)
-  | Scan (_, _, _, _, _) ->
-        failwith "Unimplemented interpretation of scan"
+  | Scan (farg, initexp, arrexp, eltTy, pos) ->
+        let farg_ret_type = rtpFunArg farg ftab pos
+        let init  = evalExp(initexp, vtab, ftab)
+        let arr  = evalExp(arrexp, vtab, ftab)
+        match arr with
+          | ArrayVal (lst, tp1) ->
+              ArrayVal (List.tail (List.scan (fun x y -> evalFunArg (farg, vtab, ftab, pos, [x; y])) init lst), farg_ret_type)
+          | otherwise -> raise (MyError("Third argument to scan is not an array: "+ppVal 0 arr, pos))
 
   | Read (t,p) ->
         let str = Console.ReadLine()
