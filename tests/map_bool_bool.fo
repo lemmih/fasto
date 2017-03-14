@@ -1,0 +1,4 @@
+fun bool writeBool(bool b) = write(b)
+
+fun [bool] main() =
+  map(writeBool, {false, true, false})

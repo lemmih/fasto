@@ -1,0 +1,4 @@
+fun bool writeInt(int i) = let x = write(i) in true
+
+fun [bool] main() =
+  map(writeInt, {10, 20, 30})

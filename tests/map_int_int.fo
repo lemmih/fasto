@@ -1,0 +1,4 @@
+fun int writeInt(int i) = write(i)
+
+fun [int] main() =
+  map(writeInt, {10, 20, 30})
