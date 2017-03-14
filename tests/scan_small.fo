@@ -1,0 +1,8 @@
+fun bool nut(bool a, bool b) = not b
+
+fun bool writeBool(bool b) = write(b)
+
+fun [bool] main() =
+  let a = {true, false, true, false} in
+  let b = scan(nut, false, a) in
+  map(writeBool, b)

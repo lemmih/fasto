@@ -716,8 +716,69 @@ let rec compileExp  (e      : TypedExp)
         the current location of the result iterator at every iteration of
         the loop.
   *)
-  | Scan (_, _, _, _, _) ->
-      failwith "Unimplemented code generation of scan"
+  | Scan (binop, acc_exp, arr_exp, tp, pos) ->
+      let arr_reg  = newName "arr_reg"   (* address of array *)
+      let size_reg = newName "size_reg"  (* size of input array *)
+      let i_reg    = newName "ind_var"   (* loop counter *)
+      let tmp_reg  = newName "tmp_reg"   (* several purposes *)
+      let loop_beg = newName "loop_beg"
+      let loop_end = newName "loop_end"
+      let addr_reg = newName "addr_reg"
+      let acc_reg  = newName "acc_reg"
+
+      let arr_code = compileExp arr_exp vtable arr_reg
+      let header1 = [ Mips.LW(size_reg, arr_reg, "0") ]
+
+      let init_regs = [ Mips.ADDI (addr_reg, place, "4") ]
+
+      (* Compile initial value into acc_reg (will be updated below) *)
+      let acc_code = compileExp acc_exp vtable acc_reg
+
+      (* Set arr_reg to address of first element instead. *)
+      (* Set i_reg to 0. While i < size_reg, loop. *)
+      let loop_code =
+              [ Mips.ADDI(arr_reg, arr_reg, "4")
+              ; Mips.MOVE(i_reg, "0")
+              ; Mips.LABEL(loop_beg)
+              ; Mips.SUB(tmp_reg, i_reg, size_reg)
+              ; Mips.BGEZ(tmp_reg, loop_end)
+              ]
+      (* Load arr[i] into tmp_reg *)
+      let load_code =
+              match getElemSize tp with
+                | One  -> [ Mips.LB   (tmp_reg, arr_reg, "0")
+                          ; Mips.ADDI (arr_reg, arr_reg, "1")
+                          ]
+                | Four -> [ Mips.LW   (tmp_reg, arr_reg, "0")
+                          ; Mips.ADDI (arr_reg, arr_reg, "4")
+                          ]
+      let store_code =
+              match getElemSize tp with
+                | One  -> [ Mips.SB   (acc_reg, addr_reg, "0")
+                          ; Mips.ADDI (addr_reg, addr_reg, "1")
+                          ]
+                | Four -> [ Mips.SW   (acc_reg, addr_reg, "0")
+                          ; Mips.ADDI (addr_reg, addr_reg, "4")
+                          ]
+          (* acc_reg := binop(tmp_reg, acc_reg) *)
+      let apply_code =
+              applyFunArg(binop, [acc_reg; tmp_reg], vtable, acc_reg, pos)
+
+      arr_code
+        @ header1
+        @ dynalloc (size_reg, place, tp)
+        @ init_regs
+        @ acc_code
+        @ loop_code
+        @ load_code
+        @ apply_code
+        @ store_code
+        @
+         [ Mips.ADDI(i_reg, i_reg, "1")
+         ; Mips.J loop_beg
+         ; Mips.LABEL loop_end
+         ]
+
 
 and applyFunArg ( ff     : TypedFunArg
                 , args   : Mips.reg list
