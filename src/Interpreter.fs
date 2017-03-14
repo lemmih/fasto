@@ -176,17 +176,15 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
           | (IntVal n1, IntVal n2) -> IntVal (n1 / n2)
           | _ -> invalidOperands "Divide on non-integral args: " [(Int, Int)] res1 res2 pos
   | And (e1, e2, pos) ->
-        let res1   = evalExp(e1, vtab, ftab)
-        let res2   = evalExp(e2, vtab, ftab)
-        match (res1, res2) with
-          | (BoolVal b1, BoolVal b2) -> BoolVal (b1 && b2)
-          | _ -> invalidOperands "AND on non-boolean args: " [(Bool, Bool)] res1 res2 pos
+        match evalExp(e1, vtab, ftab) with
+          | BoolVal false -> BoolVal false
+          | BoolVal true -> evalExp(e2, vtab, ftab)
+          | other -> raise (MyError("Type error on And "+ppVal 0 other, pos))
   | Or (e1, e2, pos) ->
-        let res1   = evalExp(e1, vtab, ftab)
-        let res2   = evalExp(e2, vtab, ftab)
-        match (res1, res2) with
-          | (BoolVal b1, BoolVal b2) -> BoolVal (b1 || b2)
-          | _ -> invalidOperands "OR on non-boolean args: " [(Bool, Bool)] res1 res2 pos
+        match evalExp(e1, vtab, ftab) with
+          | BoolVal true -> BoolVal true
+          | BoolVal false -> evalExp(e2, vtab, ftab)
+          | other -> raise (MyError("Type error on Or "+ppVal 0 other, pos))
   | Not(e1, pos) ->
         let res1   = evalExp(e1, vtab, ftab)
         match res1 with

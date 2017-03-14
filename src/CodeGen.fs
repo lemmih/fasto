@@ -170,6 +170,27 @@ let rec compileExp  (e      : TypedExp)
         let code1 = compileExp e1 vtable t1
         let code2 = compileExp e2 vtable t2
         code1 @ code2 @ [op (place,t1,t2)]
+  let compileBinOpShortCircuit isAnd op e1 e2 =
+        let t1 = newName "op_L"
+        let t2 = newName "op_R"
+        let skip = newName "skip"
+        let entry = newName "begin"
+        let exit = newName "exit"
+        let code1 = compileExp e1 vtable t1
+        let code2 = compileExp e2 vtable t2
+        let shortcircuit =
+              [ Mips.J entry
+              ; Mips.LABEL skip
+              ; (if isAnd
+                then Mips.LI (place, makeConst 0)
+                else Mips.LI (place, makeConst 1))
+              ; Mips.J exit
+              ; Mips.LABEL entry
+              ; (if isAnd
+                then Mips.BEQ (t1, "0", skip)
+                else Mips.BNE (t1, "0", skip))
+              ]
+        code1 @ shortcircuit @ code2 @ [op (place,t1,t2); Mips.LABEL exit]
   // Added by Lemmih: compileUniOp
   let compileUniOp op e1 =
         let t1 = newName "op"
@@ -398,9 +419,9 @@ let rec compileExp  (e      : TypedExp)
         in `e1 || e2` if the execution of `e1` will evaluate to `true` then
         the code of `e2` must not be executed. Similar for `And` (&&).
   *)
-  | And (e1, e2, pos) -> compileBinOp Mips.AND e1 e2 // Added by Lemmih
+  | And (e1, e2, pos) -> compileBinOpShortCircuit true Mips.AND e1 e2 // Added by Lemmih
 
-  | Or (e1, e2, pos) -> compileBinOp Mips.OR e1 e2   // Added by Lemmih
+  | Or (e1, e2, pos) -> compileBinOpShortCircuit false Mips.OR e1 e2   // Added by Lemmih
 
   (* Indexing:
      1. generate code to compute the index
