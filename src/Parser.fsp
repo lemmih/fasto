@@ -50,13 +50,11 @@ let parse_error_rich =
 %token <(int*int)> TRUE FALSE AND OR NOT NEGATE
 
 %nonassoc ifprec letprec
-// LEMMIH: Added following line
-%right AND OR
+%left AND
+%left OR
 %left DEQ LTH
-%left PLUS MINUS
-// LEMMIH: Added following line
 %left TIMES DIVIDE
-// LEMMIH: Added following line
+%left PLUS MINUS
 %nonassoc NOT NEGATE
 
 %start Prog
