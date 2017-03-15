@@ -16,5 +16,6 @@ fun int main() =
   let d3 = write (false && not false) in
 
   let a4 = write ((true || false) && true || false) in
+  let b4 = write (true || false && true || false) in
 
   0

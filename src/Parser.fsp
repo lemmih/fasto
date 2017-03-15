@@ -50,12 +50,14 @@ let parse_error_rich =
 %token <(int*int)> TRUE FALSE AND OR NOT NEGATE
 
 %nonassoc ifprec letprec
-%left AND
 %left OR
+%left AND
+%left PLUS MINUS
+%nonassoc NOT
 %left DEQ LTH
 %left TIMES DIVIDE
-%left PLUS MINUS
-%nonassoc NOT NEGATE
+%nonassoc NEGATE
+
 
 %start Prog
 %type <AbSyn.UntypedProg> Prog
