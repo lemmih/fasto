@@ -77,15 +77,15 @@ let rec copyConstPropFoldExp (vtable : VarTable)
                         restructured, semantically-equivalent expression:
                                 `let x = e1 in let y = e2 in e3`
                     *)
-                    Let (Dec (name, e2, decpos), Let (Dec (name2, body2, decpos2), body, pos2), pos) 
+                    Let (Dec (name, e2, decpos), Let (Dec (name2, body2, decpos2), body, pos2), pos)
                 | _ -> (* Fallthrough - for everything else, do nothing *)
                     let body' = copyConstPropFoldExp vtable body
                     Let (Dec (name, e', decpos), body', pos)
         | Times (e1, e2, pos) ->
             (* TODO project task 3: implement as many safe algebraic
-                simplifications as you can think of. You may inspire 
+                simplifications as you can think of. You may inspire
                 yourself from the case of `Plus`. For example:
-                     1 * x = ? 
+                     1 * x = ?
                      x * 0 = ?
             *)
             let e1' = copyConstPropFoldExp vtable e1
@@ -104,7 +104,8 @@ let rec copyConstPropFoldExp (vtable : VarTable)
             let e2' = copyConstPropFoldExp vtable e2
             match (e1', e2') with
                 (* Added By Rasmus if either is false - evaluate to false. *)
-                | (Constant (BoolVal false, _), Constant (BoolVal false, _)) -> Constant ((BoolVal false), pos)
+                | (Constant (BoolVal false, _), _) -> Constant ((BoolVal false), pos)
+                | (_, Constant (BoolVal false, _)) -> Constant ((BoolVal false), pos)
                 | (Constant (BoolVal a, _), Constant (BoolVal b, _)) ->
                     Constant (BoolVal (a && b), pos)
                 | _ -> And (e1', e2', pos)
