@@ -1,11 +1,14 @@
 fun bool botB() = botB()
 fun int botI() = botI()
+fun int botO() = botO()
 
 fun bool tester() =
   let bool0 = botB() && false in
   let bool1 = false && botB() in
   let int0 = botI() * 0 in
   let int1 = 0 * botI() in
+  let int2 = botO() * 1 in
+  let int3 = 1 * botO() in
   true
 
 fun bool main() = true
