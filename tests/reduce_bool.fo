@@ -1,0 +1,11 @@
+fun bool and(bool a, bool b) = a && b
+fun bool or(bool a, bool b) = a || b
+fun bool any([bool] a) = reduce(or, false, a)
+fun bool all([bool] a) = reduce(and, true, a)
+
+fun int main() =
+  let a = write(any({false, false, false, false})) in
+  let b = write(any({false, false, true, false})) in
+  let c = write(all({true, true, true, true, false})) in
+  let d = write(all({true, true, true, true, true})) in
+  0
