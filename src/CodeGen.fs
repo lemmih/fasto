@@ -163,13 +163,35 @@ let rec compileExp  (e      : TypedExp)
                     (vtable : VarTable)
                     (place  : Mips.reg)
                   : Mips.Instruction list =
+  // Added by Lemmih: compileBinOp
   let compileBinOp op e1 e2 =
         let t1 = newName "op_L"
         let t2 = newName "op_R"
         let code1 = compileExp e1 vtable t1
         let code2 = compileExp e2 vtable t2
         code1 @ code2 @ [op (place,t1,t2)]
-
+  let compileBinOpShortCircuit isAnd op e1 e2 =
+        let t1 = newName "op_L"
+        let t2 = newName "op_R"
+        let skip = newName "skip"
+        let entry = newName "begin"
+        let exit = newName "exit"
+        let code1 = compileExp e1 vtable t1
+        let code2 = compileExp e2 vtable t2
+        let shortcircuit =
+              [ Mips.J entry
+              ; Mips.LABEL skip
+              ; (if isAnd
+                then Mips.LI (place, makeConst 0)
+                else Mips.LI (place, makeConst 1))
+              ; Mips.J exit
+              ; Mips.LABEL entry
+              ; (if isAnd
+                then Mips.BEQ (t1, "0", skip)
+                else Mips.BNE (t1, "0", skip))
+              ]
+        code1 @ shortcircuit @ code2 @ [op (place,t1,t2); Mips.LABEL exit]
+  // Added by Lemmih: compileUniOp
   let compileUniOp op e1 =
         let t1 = newName "op"
         let code1 = compileExp e1 vtable t1
@@ -184,6 +206,7 @@ let rec compileExp  (e      : TypedExp)
       else
         [ Mips.LUI (place, makeConst (n / 65536))
         ; Mips.ORI (place, place, makeConst (n % 65536)) ]
+  // Added by Lemmih: Constant BoolVal
   | Constant (BoolVal true, _) -> [Mips.LI (place, makeConst 1)]
   | Constant (BoolVal false, _) -> [Mips.LI (place, makeConst 0)]
   | Constant (CharVal c, pos) -> [ Mips.LI (place, makeConst (int c)) ]
@@ -236,18 +259,18 @@ let rec compileExp  (e      : TypedExp)
         | None          -> raise (MyError ("Name " + vname + " not found", pos))
         | Some reg_name -> [Mips.MOVE (place, reg_name)]
 
-  | Plus (e1, e2, pos) -> compileBinOp Mips.ADD e1 e2
+  | Plus (e1, e2, pos) -> compileBinOp Mips.ADD e1 e2  // Added by Lemmih
 
-  | Minus (e1, e2, pos) -> compileBinOp Mips.SUB e1 e2
+  | Minus (e1, e2, pos) -> compileBinOp Mips.SUB e1 e2 // Added by Lemmih
 
   (* TODO project task 1:
         Look in `AbSyn.fs` for the expression constructors `Times`, ...
         `Times` and `Divide` are very similar to `Plus`/`Minus`
         `Not` and `Negate` are simpler; you can use `Mips.XORI` for `Not`
   *)
-  | Times (e1, e2, pos) -> compileBinOp Mips.MUL e1 e2
+  | Times (e1, e2, pos) -> compileBinOp Mips.MUL e1 e2  // Added by Lemmih
 
-  | Divide (e1, e2, pos) -> compileBinOp Mips.DIV e1 e2
+  | Divide (e1, e2, pos) -> compileBinOp Mips.DIV e1 e2 // Added by Lemmih
 
   | Not (e1, pos) -> compileUniOp (fun (p,reg) -> Mips.XORI (p, reg, makeConst 1)) e1
 
@@ -396,9 +419,9 @@ let rec compileExp  (e      : TypedExp)
         in `e1 || e2` if the execution of `e1` will evaluate to `true` then
         the code of `e2` must not be executed. Similar for `And` (&&).
   *)
-  | And (e1, e2, pos) -> compileBinOp Mips.AND e1 e2
+  | And (e1, e2, pos) -> compileBinOpShortCircuit true Mips.AND e1 e2 // Added by Lemmih
 
-  | Or (e1, e2, pos) -> compileBinOp Mips.OR e1 e2
+  | Or (e1, e2, pos) -> compileBinOpShortCircuit false Mips.OR e1 e2   // Added by Lemmih
 
   (* Indexing:
      1. generate code to compute the index
@@ -554,8 +577,60 @@ let rec compileExp  (e      : TypedExp)
         If `n` is less than `0` then remember to terminate the program with
         an error -- see implementation of `iota`.
   *)
-  | Replicate (_, _, _, _) ->
-      failwith "Unimplemented code generation of replicate"
+  | Replicate (n_exp, elt_exp, tp, (line, _)) ->
+      let size_reg = newName "size_reg"
+      let elt_reg = newName "size_reg"
+      let n_code = compileExp n_exp vtable size_reg
+      let exp_code = compileExp elt_exp vtable elt_reg
+      (* size_reg is now the integer n. *)
+
+      (* Check that array size N >= 0:
+         if N - 1 >= 0 then jumpto safe_lab
+         jumpto "_IllegalArrSizeError_"
+         safe_lab: ...
+      *)
+      let safe_lab = newName "safe_lab"
+      let checksize = [ Mips.ADDI (size_reg, size_reg, "-1")
+                      ; Mips.BGEZ (size_reg, safe_lab)
+                      ; Mips.LI ("5", makeConst line)
+                      ; Mips.J "_IllegalArrSizeError_"
+                      ; Mips.LABEL (safe_lab)
+                      ; Mips.ADDI (size_reg, size_reg, "1")
+                      ]
+
+      let addr_reg = newName "addr_reg"
+      let i_reg = newName "i_reg"
+      let init_regs = [ Mips.ADDI (addr_reg, place, "4")
+                      ; Mips.MOVE (i_reg, "0") ]
+      (* addr_reg is now the position of the first array element. *)
+
+      (* Run a loop.  Keep jumping back to loop_beg until it is not the
+         case that i_reg < size_reg, and then jump to loop_end. *)
+      let loop_beg = newName "loop_beg"
+      let loop_end = newName "loop_end"
+      let tmp_reg = newName "tmp_reg"
+      let loop_header = [ Mips.LABEL (loop_beg)
+                        ; Mips.SUB (tmp_reg, i_reg, size_reg)
+                        ; Mips.BGEZ (tmp_reg, loop_end)
+                        ]
+      (* replicate is just 'arr[i] = elt'. *)
+      let loop_rep    =
+            match getElemSize tp with
+              | One ->  [ Mips.SB (elt_reg, addr_reg, "0")
+                        ; Mips.ADDI (addr_reg, addr_reg, "1") ]
+              | Four -> [ Mips.SW (elt_reg, addr_reg, "0")
+                        ; Mips.ADDI (addr_reg, addr_reg, "4") ]
+      let loop_footer = [ Mips.ADDI (i_reg, i_reg, "1")
+                        ; Mips.J loop_beg
+                        ; Mips.LABEL loop_end
+                        ]
+      n_code
+       @ checksize
+       @ dynalloc (size_reg, place, Int)
+       @ init_regs
+       @ loop_header
+       @ loop_rep
+       @ loop_footer
 
   (* TODO project task 2: see also the comment to replicate.
      `map(f, arr)`:  has some similarity with the implementation of iota.
@@ -563,8 +638,76 @@ let rec compileExp  (e      : TypedExp)
      It is useful to maintain two array iterators: one for the input array `arr`
      and one for the result array.
   *)
-  | Map (_, _, _, _, _) ->
-      failwith "Unimplemented code generation of map"
+  (*
+    n = size of lst
+    allocate new array
+    loop over array:
+      tmp = old_arr[i]
+      arr[i] = f(tmp)
+  *)
+  | Map (unop, arr_exp, arr_tp, ret_tp, pos) ->
+      let tmp_elt_reg = newName "tmp_elt_reg"
+      let tmp_ret_reg = newName "tmp_ret_reg"
+      let size_reg = newName "size_reg"
+      let arr_reg  = newName "arr_reg"   (* address of array *)
+      let arr_code = compileExp arr_exp vtable arr_reg
+      let header1 = [ Mips.LW(size_reg, arr_reg, "0")
+                    ; Mips.ADDI (arr_reg, arr_reg, "4") ]
+      (* size_reg is now the integer n. *)
+
+      let addr_reg = newName "addr_reg"
+      let i_reg = newName "i_reg"
+      let init_regs = [ Mips.ADDI (addr_reg, place, "4")
+                      ; Mips.MOVE (i_reg, "0") ]
+      (* addr_reg is now the position of the first array element. *)
+
+      (* Run a loop.  Keep jumping back to loop_beg until it is not the
+         case that i_reg < size_reg, and then jump to loop_end. *)
+      let loop_beg = newName "loop_beg"
+      let loop_end = newName "loop_end"
+      let tmp_reg = newName "tmp_reg"
+      let loop_header = [ Mips.LABEL (loop_beg)
+                        ; Mips.SUB (tmp_reg, i_reg, size_reg)
+                        ; Mips.BGEZ (tmp_reg, loop_end)
+                        ]
+      (* iota is just 'arr[i] = i'.  arr[i] is addr_reg. *)
+      let loop_map   = [ Mips.SW (i_reg, addr_reg, "0") ]
+      let load_code dst src ty =
+              match getElemSize ty with
+                | One  -> [ Mips.LB   (dst, src, "0")
+                          ; Mips.ADDI (src, src, "1")
+                          ]
+                | Four -> [ Mips.LW   (dst, src, "0")
+                          ; Mips.ADDI (src, src, "4")
+                          ]
+      let store_code dst src ty =
+              match getElemSize ty with
+                | One  -> [ Mips.SB   (src, dst, "0")
+                          ; Mips.ADDI (dst, dst, "1")
+                          ]
+                | Four -> [ Mips.SW   (src, dst, "0")
+                          ; Mips.ADDI (dst, dst, "4")
+                          ]
+      (* tmp_elt := arr++;
+         tmp_ret := binop(tmp_elt)
+         addr++; := tmp_ret
+      *)
+      let loop_map =
+            load_code tmp_elt_reg arr_reg arr_tp @
+            applyFunArg(unop, [tmp_elt_reg], vtable, tmp_ret_reg, pos) @
+            store_code addr_reg tmp_ret_reg ret_tp
+      let loop_footer = [ Mips.ADDI (i_reg, i_reg, "1")
+                        ; Mips.J loop_beg
+                        ; Mips.LABEL loop_end
+                        ]
+      arr_code
+       @ header1
+       @ dynalloc (size_reg, place, ret_tp)
+       @ init_regs
+       @ loop_header
+       @ loop_map
+       @ loop_footer
+
 
   (* TODO project task 2: see also the comment to replicate.
      `scan(f, ne, arr)`: you can inspire yourself from the implementation of
@@ -573,8 +716,69 @@ let rec compileExp  (e      : TypedExp)
         the current location of the result iterator at every iteration of
         the loop.
   *)
-  | Scan (_, _, _, _, _) ->
-      failwith "Unimplemented code generation of scan"
+  | Scan (binop, acc_exp, arr_exp, tp, pos) ->
+      let arr_reg  = newName "arr_reg"   (* address of array *)
+      let size_reg = newName "size_reg"  (* size of input array *)
+      let i_reg    = newName "ind_var"   (* loop counter *)
+      let tmp_reg  = newName "tmp_reg"   (* several purposes *)
+      let loop_beg = newName "loop_beg"
+      let loop_end = newName "loop_end"
+      let addr_reg = newName "addr_reg"
+      let acc_reg  = newName "acc_reg"
+
+      let arr_code = compileExp arr_exp vtable arr_reg
+      let header1 = [ Mips.LW(size_reg, arr_reg, "0") ]
+
+      let init_regs = [ Mips.ADDI (addr_reg, place, "4") ]
+
+      (* Compile initial value into acc_reg (will be updated below) *)
+      let acc_code = compileExp acc_exp vtable acc_reg
+
+      (* Set arr_reg to address of first element instead. *)
+      (* Set i_reg to 0. While i < size_reg, loop. *)
+      let loop_code =
+              [ Mips.ADDI(arr_reg, arr_reg, "4")
+              ; Mips.MOVE(i_reg, "0")
+              ; Mips.LABEL(loop_beg)
+              ; Mips.SUB(tmp_reg, i_reg, size_reg)
+              ; Mips.BGEZ(tmp_reg, loop_end)
+              ]
+      (* Load arr[i] into tmp_reg *)
+      let load_code =
+              match getElemSize tp with
+                | One  -> [ Mips.LB   (tmp_reg, arr_reg, "0")
+                          ; Mips.ADDI (arr_reg, arr_reg, "1")
+                          ]
+                | Four -> [ Mips.LW   (tmp_reg, arr_reg, "0")
+                          ; Mips.ADDI (arr_reg, arr_reg, "4")
+                          ]
+      let store_code =
+              match getElemSize tp with
+                | One  -> [ Mips.SB   (acc_reg, addr_reg, "0")
+                          ; Mips.ADDI (addr_reg, addr_reg, "1")
+                          ]
+                | Four -> [ Mips.SW   (acc_reg, addr_reg, "0")
+                          ; Mips.ADDI (addr_reg, addr_reg, "4")
+                          ]
+          (* acc_reg := binop(tmp_reg, acc_reg) *)
+      let apply_code =
+              applyFunArg(binop, [acc_reg; tmp_reg], vtable, acc_reg, pos)
+
+      arr_code
+        @ header1
+        @ dynalloc (size_reg, place, tp)
+        @ init_regs
+        @ acc_code
+        @ loop_code
+        @ load_code
+        @ apply_code
+        @ store_code
+        @
+         [ Mips.ADDI(i_reg, i_reg, "1")
+         ; Mips.J loop_beg
+         ; Mips.LABEL loop_end
+         ]
+
 
 and applyFunArg ( ff     : TypedFunArg
                 , args   : Mips.reg list

@@ -39,17 +39,22 @@ let parse_error_rich =
 %token <string*(int*int)> ID STRINGLIT
 %token <(int*int)> IF THEN ELSE LET IN EOF
 %token <(int*int)> INT CHAR BOOL
+// LEMMIH: Added TIMES DIVIDE
 %token <(int*int)> PLUS MINUS LESS TIMES DIVIDE
 %token <(int*int)> DEQ LTH EQ OP REDUCE IOTA ARROW
-%token <(int*int)> FUN FN COMMA SEMICOLON READ WRITE REPLICATE MAP
+// LEMMIH: Added REPLICATE MAP
+%token <(int*int)> FUN FN COMMA SEMICOLON READ WRITE
+%token <(int*int)> REPLICATE MAP SCAN
 %token <(int*int)> LPAR RPAR LBRACKET RBRACKET LCURLY RCURLY
+// LEMMIH: Added following line.
 %token <(int*int)> TRUE FALSE AND OR NOT NEGATE
 
 %nonassoc ifprec letprec
-%left AND OR
+%left AND
+%left OR
 %left DEQ LTH
-%left PLUS MINUS
 %left TIMES DIVIDE
+%left PLUS MINUS
 %nonassoc NOT NEGATE
 
 %start Prog
@@ -94,22 +99,22 @@ Params : Type ID COMMA Params
 
 Exp : NUM            { Constant (IntVal (fst $1), snd $1) }
     | CHARLIT        { Constant (CharVal (fst $1), snd $1) }
-    | TRUE           { Constant (BoolVal true, $1) }
-    | FALSE          { Constant (BoolVal false, $1) }
+    | TRUE           { Constant (BoolVal true, $1) }  // Added by Lemmih
+    | FALSE          { Constant (BoolVal false, $1) } // Added by Lemmih
     | ID             { Var $1 }
     | STRINGLIT      { StringLit $1 }
     | LCURLY Exps RCURLY
                      { ArrayLit ($2, (), $1) }
     | Exp PLUS  Exp  { Plus ($1, $3, $2) }
     | Exp MINUS Exp  { Minus($1, $3, $2) }
-    | Exp TIMES Exp  { Times ($1, $3, $2) }
-    | Exp DIVIDE Exp { Divide ($1, $3, $2) }
+    | Exp TIMES Exp  { Times ($1, $3, $2) }   // Added by Lemmih
+    | Exp DIVIDE Exp { Divide ($1, $3, $2) }  // Added by Lemmih
     | Exp DEQ   Exp  { Equal($1, $3, $2) }
     | Exp LTH   Exp  { Less ($1, $3, $2) }
-    | Exp AND Exp    { And ($1, $3, $2) }
-    | Exp OR Exp     { Or ($1, $3, $2) }
-    | NOT Exp        { Not ($2, $1) }
-    | NEGATE Exp     { Negate ($2, $1) }
+    | Exp AND Exp    { And ($1, $3, $2) }     // Added by Lemmih
+    | Exp OR Exp     { Or ($1, $3, $2) }      // Added by Lemmih
+    | NOT Exp        { Not ($2, $1) }         // Added by Lemmih
+    | NEGATE Exp     { Negate ($2, $1) }      // Added by Lemmih
     | IF Exp THEN Exp ELSE Exp %prec ifprec
                      { If ($2, $4, $6, $1) }
     | ID LPAR Exps RPAR
@@ -123,10 +128,12 @@ Exp : NUM            { Constant (IntVal (fst $1), snd $1) }
                      { Iota ($3, $1) }
     | REDUCE LPAR FunArg COMMA Exp COMMA Exp RPAR
                      { Reduce ($3, $5, $7, (), $1) }
-    | REPLICATE LPAR Exp COMMA Exp RPAR
-                     {  Replicate ($3, $5, (), $1)}
-    | MAP LPAR FunArg COMMA Exp RPAR
-                     {  Map ($3, $5, (), (), $1)}
+    | REPLICATE LPAR Exp COMMA Exp RPAR                // Added by Lemmih
+                     {  Replicate ($3, $5, (), $1) }
+    | MAP LPAR FunArg COMMA Exp RPAR                   // Added by Lemmih
+                     {  Map ($3, $5, (), (), $1) }
+    | SCAN LPAR FunArg COMMA Exp COMMA Exp RPAR
+                     { Scan ($3,$5,$7,(),$1) }
     | LPAR Exp RPAR  { $2 }
     | LET ID EQ Exp IN Exp %prec letprec
                      { Let (Dec (fst $2, $4, $3), $6, $1) }

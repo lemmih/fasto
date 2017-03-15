@@ -1,0 +1,5 @@
+fun int writeInt(int i) = write(i)
+
+fun [int] main() =
+  let arr = replicate(7, 0) in
+  map(writeInt, arr)

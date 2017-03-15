@@ -77,6 +77,7 @@ let rec checkExp  (ftab : FunTable)
         then (t, op (e1', e2', pos))
         else raise (MyError ("In checkBinOp: types not equal "+ppType t+" and "+ppType t1+" and "+ppType t2, pos))
 
+    // Added by Lemmih
     let checkUniOp   op
                         (t : Type)
                         (e1 : UntypedExp) (pos : Position)
@@ -120,6 +121,7 @@ let rec checkExp  (ftab : FunTable)
         Implement by pattern matching Plus/Minus above.
         See `AbSyn.fs` for the expression constructors of `Times`, ...
     *)
+    // Added by Lemmih: Times, Divide, And, Or, Not, Negate.
     | Times (e1,e2,pos) -> checkBinOp Times Int e1 e2 pos
 
     | Divide (e1,e2,pos) -> checkBinOp Divide Int e1 e2 pos
@@ -245,6 +247,7 @@ let rec checkExp  (ftab : FunTable)
           of replicate is `[t]`
     *)
     (* replicate :: Int -> a -> [a] *)
+    // Added by Lemmih: Replicate
     | Replicate (n_exp, val_exp, _, pos) ->
         let (n_type  , n_dec  ) = checkExp ftab vtab n_exp
         let (val_type, val_dec  ) = checkExp ftab vtab val_exp
@@ -259,6 +262,7 @@ let rec checkExp  (ftab : FunTable)
          - `arr` should be of type `[ta]`
          - the result of `map` should have type `[tb]`
     *)
+    // Added by Lemmih: Map
     | Map (fun_exp, arr_exp, _, _, pos) ->
         let (arr_type  , arr_dec  ) = checkExp ftab vtab arr_exp
         match arr_type with
@@ -267,7 +271,7 @@ let rec checkExp  (ftab : FunTable)
               if fun_arg_type <> aTy
                 then failwith "invalid arg type in map"
               (Array retTy, Map (typed_fun, arr_dec, fun_arg_type, retTy, pos))
-          | otherwise -> failwith "type error in map"
+          | otherwise -> failwith ("type error in map: " + ppType arr_type)
 
     (* TODO project task 2: `scan(f, ne, arr)`
         Hint: Implementation is very similar to `reduce(f, ne, arr)`.
@@ -275,8 +279,34 @@ let rec checkExp  (ftab : FunTable)
               scan's return type is the same as the type of `arr`,
               while reduce's return type is that of an element of `arr`).
     *)
-    | Scan (_, _, _, _, _) ->
-        failwith "Unimplemented type check of scan"
+    | Scan (f, n_exp, arr_exp, _, pos) ->
+        let (n_type  , n_dec  ) = checkExp ftab vtab n_exp
+        let (arr_type, arr_dec) = checkExp ftab vtab arr_exp
+        let elem_type =
+            match arr_type with
+              | Array t -> t
+              | other -> raise (MyError ("Scan: Argument not an array", pos))
+        let (f', f_arg_type) =
+            match checkFunArg ftab vtab pos f with
+              | (f', res, [a1; a2]) ->
+                  if a1 = a2 && a2 = res
+                  then (f', res)
+                  else raise (MyError( "Scan: incompatible function type of " +
+                                       (ppFunArg 0 f) + ": " + showFunType ([a1; a2], res)
+                                     , pos))
+              | (_, res, args) ->
+                  raise (MyError ( "Scan: incompatible function type of " +
+                                   ppFunArg 0 f + ": " + showFunType (args, res)
+                                 , pos))
+        let err (s, t) = MyError ( "Scan: unexpected " + s + " type " + ppType t +
+                                   ", expected " + ppType f_arg_type
+                                 , pos)
+        if   elem_type = f_arg_type && elem_type = n_type then
+             (Array elem_type, Scan (f', n_dec, arr_dec, elem_type, pos))
+        elif elem_type = f_arg_type then
+             raise (err ("neutral element", n_type))
+        else raise (err ("array element", elem_type))
+
 
 and checkFunArg  (ftab : FunTable)
                  (vtab : VarTable)

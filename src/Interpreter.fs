@@ -162,6 +162,7 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
         e.g., `And (e1, e2, pos)` should not evaluate `e2` if `e1` already
               evaluates to false.
   *)
+  // Added by Lemmih: Times, Divide, And, Or, Not, Negate
   | Times(e1, e2, pos) ->
         let res1   = evalExp(e1, vtab, ftab)
         let res2   = evalExp(e2, vtab, ftab)
@@ -175,17 +176,15 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
           | (IntVal n1, IntVal n2) -> IntVal (n1 / n2)
           | _ -> invalidOperands "Divide on non-integral args: " [(Int, Int)] res1 res2 pos
   | And (e1, e2, pos) ->
-        let res1   = evalExp(e1, vtab, ftab)
-        let res2   = evalExp(e2, vtab, ftab)
-        match (res1, res2) with
-          | (BoolVal b1, BoolVal b2) -> BoolVal (b1 && b2)
-          | _ -> invalidOperands "AND on non-boolean args: " [(Bool, Bool)] res1 res2 pos
+        match evalExp(e1, vtab, ftab) with
+          | BoolVal false -> BoolVal false
+          | BoolVal true -> evalExp(e2, vtab, ftab)
+          | other -> raise (MyError("Type error on And "+ppVal 0 other, pos))
   | Or (e1, e2, pos) ->
-        let res1   = evalExp(e1, vtab, ftab)
-        let res2   = evalExp(e2, vtab, ftab)
-        match (res1, res2) with
-          | (BoolVal b1, BoolVal b2) -> BoolVal (b1 || b2)
-          | _ -> invalidOperands "OR on non-boolean args: " [(Bool, Bool)] res1 res2 pos
+        match evalExp(e1, vtab, ftab) with
+          | BoolVal true -> BoolVal true
+          | BoolVal false -> evalExp(e2, vtab, ftab)
+          | other -> raise (MyError("Type error on Or "+ppVal 0 other, pos))
   | Not(e1, pos) ->
         let res1   = evalExp(e1, vtab, ftab)
         match res1 with
@@ -269,6 +268,7 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
          the value of `a`; otherwise raise an error (containing
          a meaningful message).
   *)
+  // Added by Lemmih: Replicate
   | Replicate (nExp, eltExp, _, pos) ->
         let n    = evalExp(nExp, vtab, ftab)
         let elt  = evalExp(eltExp, vtab, ftab)
@@ -283,6 +283,7 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
        - use F# `List.map` to evaluate `f(a)` for every element (value) `a` of `arr`,
        - create an `ArrayVal` from the (list) result of the previous step.
   *)
+  // Added by Lemmih: Map
   | Map (farg, arrexp, aTy, bTy, pos) ->
         let farg_ret_type = rtpFunArg farg ftab pos
         let arr  = evalExp(arrexp, vtab, ftab)
@@ -295,9 +296,16 @@ let rec evalExp (e : UntypedExp, vtab : VarTable, ftab : FunTable) : Value =
   (* TODO project task 2: `scan(f, ne, arr)`
      Implementation similar to reduce, except that it produces an array
      of the same type and length to the input array `arr`.
+     scan(+, 0, [1,2,3]) = [0+1, 0+1+2, 0+1+2+3] = [1,3,6]
   *)
-  | Scan (_, _, _, _, _) ->
-        failwith "Unimplemented interpretation of scan"
+  | Scan (farg, initexp, arrexp, eltTy, pos) ->
+        let farg_ret_type = rtpFunArg farg ftab pos
+        let init  = evalExp(initexp, vtab, ftab)
+        let arr  = evalExp(arrexp, vtab, ftab)
+        match arr with
+          | ArrayVal (lst, tp1) ->
+              ArrayVal (List.tail (List.scan (fun x y -> evalFunArg (farg, vtab, ftab, pos, [x; y])) init lst), farg_ret_type)
+          | otherwise -> raise (MyError("Third argument to scan is not an array: "+ppVal 0 arr, pos))
 
   | Read (t,p) ->
         let str = Console.ReadLine()

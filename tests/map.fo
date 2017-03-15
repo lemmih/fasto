@@ -1,0 +1,5 @@
+fun int plus5(int i) = i+5
+fun int writeInt(int i) = write(i)
+
+fun [int] main() =
+  map(writeInt, map(plus5,{10, 20, 30}))

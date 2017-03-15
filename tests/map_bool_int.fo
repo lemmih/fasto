@@ -1,0 +1,4 @@
+fun int writeBool(bool b) = let x = write(b) in 0
+
+fun [int] main() =
+  map(writeBool, {false, true, false})

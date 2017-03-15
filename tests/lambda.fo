@@ -7,4 +7,4 @@ fun int main() =
   let z = iota(N) in
   let w = write_int_arr(map(fn int (int x) => x + 2, z)) in
   let nl = write("\n") in
-  write_int(reduce(op+, 0, w))
+  write_int(reduce(fn int (int x, int y) => x + y, 0, w))
