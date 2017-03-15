@@ -18,7 +18,7 @@ To run all tests from the 'tests' directory, run 'bin/runtests.sh'.
     Testing    basic_div_rules.fo:  Success.
     Testing         basic_mult.fo:  Success.
     Testing   basic_mult_rules.fo:  Success.
-    Testing           bool_ops.fo:  Failed
+    Testing           bool_ops.fo:  Success.
     Testing copyConstPropFold0.fo:  Success.
     Testing copyConstPropFold1.fo:  Success.
     Testing         fail_parse.fo:  Success.
@@ -26,7 +26,7 @@ To run all tests from the 'tests' directory, run 'bin/runtests.sh'.
     Testing         inline_map.fo:  Success.
     Testing            io_mssp.fo:  Success.
     Testing               iota.fo:  Success.
-    Testing             lambda.fo:  Failed.
+    Testing             lambda.fo:  Success.
     Testing      map_bool_bool.fo:  Success.
     Testing       map_bool_int.fo:  Success.
     Testing                map.fo:  Success.
