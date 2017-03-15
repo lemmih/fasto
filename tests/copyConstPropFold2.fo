@@ -1,8 +1,10 @@
+fun bool botB() = botB()
+fun int botI() = botI()
 
 fun bool main() =
-  let bool0 = true && false in
-  let bool1 = false && true in
-  let bool2 = true && true in
-  let bool3 = false && false in
-  write(bool3)
+  let bool0 = botB() && false in
+  let bool1 = false && botB() in
+  let int0 = botI() * 0 in
+  let int1 = 0 * botI() in
+  true
 

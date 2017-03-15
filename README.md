@@ -21,6 +21,7 @@ To run all tests from the 'tests' directory, run 'bin/runtests.sh'.
     Testing           bool_ops.fo:  Success.
     Testing copyConstPropFold0.fo:  Success.
     Testing copyConstPropFold1.fo:  Success.
+    Testing copyConstPropFold2.fo:  Success.
     Testing         fail_parse.fo:  Success.
     Testing                fib.fo:  Success.
     Testing         inline_map.fo:  Success.
@@ -38,6 +39,7 @@ To run all tests from the 'tests' directory, run 'bin/runtests.sh'.
     Testing             ordchr.fo:  Success.
     Testing       proj_figure3.fo:  Success.
     Testing             reduce.fo:  Success.
+    Testing        reduce_bool.fo:  Success.
     Testing          replicate.fo:  Success.
     Testing      replicate_int.fo:  Success.
     Testing               scan.fo:  Success.
